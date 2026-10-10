@@ -1,0 +1,57 @@
+# ---- secrets and personal data: never in git ----
+*.db
+*.sqlite
+config.json
+.env
+.env.*
+!.env.example
+dashboard_password.txt
+*.keystore
+*.keystore.pass
+owner_voice.npy
+*.npy
+wa_chrome_profile/
+usage_log.jsonl*
+
+# ---- logs, hand-over notes, run-time state ----
+*.log
+jarvis.log*
+AUTONOMOUS_LOG.md
+PENDING_FROM_VIVEK.md
+test_report.txt
+check_skills.txt
+jarvis_off.flag
+jarvis_addons/capabilities/activity.jsonl
+jarvis_addons/capabilities/registry.json
+jarvis_addons/data/last_scan.json
+agent_tasks/
+startup_backup/
+
+# ---- screenshots, downloads, generated audio ----
+screenshots/
+downloads/
+*.png
+*.jpg
+*.mp3
+*.wav
+time.sleep
+
+# ---- old first versions and backups (they held hardcoded private values) ----
+live_cmd_console_backup_*.py
+live_cmd_console_old.py
+JARVIS_Launcher_OLD_BACKUP.ps1
+jarvis.py
+jarvis.pyw
+
+# ---- environment, caches, binaries, models ----
+venv/
+__pycache__/
+*.pyc
+models/
+platform-tools/
+*.exe
+*.dll
+jarvis_addons/phone_helper/_build/
+
+# Local-only notes for the public export (real names -> made-up names)
+*.local.json

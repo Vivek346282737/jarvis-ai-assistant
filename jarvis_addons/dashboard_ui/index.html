@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JARVIS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23020507'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2300e5ff' stroke-width='2' stroke-dasharray='5 3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%235ffbf1'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#020507;--cy:#00e5ff;--teal:#5ffbf1;--am:#ff9d45;--green:#4dffa6;--red:#ff4d5e;--vio:#b48cff;--text:#bfeff5;--dim:#4f8b95;--line:rgba(0,229,255,.26);--panel:rgba(0,20,26,.5);--glow:var(--cy);
+  --mono:"Share Tech Mono","JetBrains Mono",Consolas,"Cascadia Mono","Lucida Console",ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.45 var(--mono);overflow-x:hidden;letter-spacing:.02em;
+  background-image:linear-gradient(rgba(0,229,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.045) 1px,transparent 1px),radial-gradient(900px 520px at 50% 0,rgba(0,229,255,.08),transparent 70%);
+  background-size:44px 44px,44px 44px,100% 100%;background-attachment:fixed}
+/* scan lines over everything: very faint, never catches a click */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(to bottom,rgba(0,229,255,.05) 0 1px,transparent 1px 3px);animation:flicker 5s steps(1) infinite;opacity:.55}
+@keyframes flicker{0%,100%{opacity:.55}47%{opacity:.5}48%{opacity:.34}50%{opacity:.58}82%{opacity:.46}}
+button{font:inherit;color:inherit;cursor:pointer;letter-spacing:inherit}
+.app{max-width:1440px;margin:0 auto;padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+/* ---- top bar */
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 9px;border-bottom:1px solid var(--line);position:relative}
+header::before{content:"";width:16px;height:12px;background:var(--cy);box-shadow:0 0 12px var(--cy);flex:none}
+header::after{content:"";position:absolute;left:0;bottom:-1px;width:150px;height:2px;background:var(--cy);box-shadow:0 0 10px var(--cy)}
+h1{font-size:15px;letter-spacing:.42em;margin:0;font-weight:400;color:var(--teal);text-shadow:0 0 12px var(--cy)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border:1px solid var(--line);background:rgba(0,229,255,.04);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.pill i{width:7px;height:7px;background:var(--dim)}
+.pill b{font-weight:400}
+.pill.on{color:var(--teal);border-color:rgba(95,251,241,.5)}.pill.on i{background:var(--teal);box-shadow:0 0 9px var(--teal);animation:blink 2s steps(1) infinite}
+.pill.off{color:var(--red);border-color:rgba(255,77,94,.55)}.pill.off i{background:var(--red);box-shadow:0 0 9px var(--red)}
+@keyframes blink{50%{opacity:.35}}
+.spacer{flex:1}
+.ghost{background:none;border:1px solid var(--line);padding:4px 10px;color:var(--dim);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;transition:color .15s,border-color .15s,box-shadow .15s}
+.ghost:hover{color:var(--teal);border-color:var(--cy);box-shadow:0 0 12px -2px var(--cy)}
+.ghost:active{transform:translateY(1px)}
+/* ---- layout */
+.grid{display:grid;grid-template-columns:330px 1fr 330px;gap:12px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* ---- HUD panel: thin border, four corner brackets, label tab */
+.card{--b:var(--cy);--bk:16px;position:relative;overflow:hidden;min-width:0;padding:13px 14px 12px;border:1px solid var(--line);
+  background:linear-gradient(var(--b),var(--b)) 0 0/var(--bk) 2px no-repeat,linear-gradient(var(--b),var(--b)) 0 0/2px var(--bk) no-repeat,
+    linear-gradient(var(--b),var(--b)) 100% 0/var(--bk) 2px no-repeat,linear-gradient(var(--b),var(--b)) 100% 0/2px var(--bk) no-repeat,
+    linear-gradient(var(--b),var(--b)) 0 100%/var(--bk) 2px no-repeat,linear-gradient(var(--b),var(--b)) 0 100%/2px var(--bk) no-repeat,
+    linear-gradient(var(--b),var(--b)) 100% 100%/var(--bk) 2px no-repeat,linear-gradient(var(--b),var(--b)) 100% 100%/2px var(--bk) no-repeat,var(--panel);
+  box-shadow:inset 0 0 26px -14px var(--cy);transition:box-shadow .25s,border-color .25s,--bk .18s ease-out;backdrop-filter:blur(7px) saturate(1.25);-webkit-backdrop-filter:blur(7px) saturate(1.25)}
+.card.click{cursor:pointer}
+.card.click:hover{border-color:rgba(0,229,255,.75);animation:glowpulse 1.4s ease-in-out infinite}
+.card.click:active{transform:scale(.995)}
+@keyframes glowpulse{0%,100%{box-shadow:inset 0 0 26px -14px var(--cy),0 0 14px -6px var(--cy)}50%{box-shadow:inset 0 0 30px -10px var(--cy),0 0 24px -4px var(--cy)}}
+.card h2{margin:-13px -14px 11px;padding:0 10px 0 0;font-size:10px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid rgba(0,229,255,.14);min-height:22px}
+.card h2 em{font-style:normal;background:rgba(0,229,255,.16);color:var(--teal);padding:4px 10px 4px 12px;border-right:2px solid var(--cy);text-shadow:0 0 8px var(--cy);white-space:nowrap}
+.card h2 span{letter-spacing:.08em;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.big{font-size:38px;line-height:1.05;color:var(--teal);text-shadow:0 0 14px var(--cy),0 0 2px #fff}
+.dim{color:var(--dim)}.small{font-size:11px}
+.up{text-transform:uppercase;letter-spacing:.12em}
+.row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed rgba(0,229,255,.13);font-size:12px}
+.row:last-child{border-bottom:0}
+.row span{color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-size:10.5px}
+.row b{font-weight:400;color:var(--teal);text-shadow:0 0 8px rgba(0,229,255,.7);text-align:right}
+.flick{animation:flickin .45s steps(2)}
+@keyframes flickin{0%{opacity:.15}30%{opacity:1}45%{opacity:.4}100%{opacity:1}}
+/* ---- rings */
+.rings{display:flex;justify-content:space-around;gap:6px}
+.ring{text-align:center;font-size:10px;color:var(--dim);letter-spacing:.2em;text-transform:uppercase}
+.ring svg{width:82px;height:82px;display:block;margin:0 auto 4px;overflow:visible}
+.ring circle{fill:none;stroke-width:5;stroke:rgba(0,229,255,.09)}
+.ring circle.tick{stroke-width:1;stroke:rgba(0,229,255,.35);stroke-dasharray:1 5}
+.ring .v{stroke:currentColor;stroke-linecap:butt;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .6s;filter:drop-shadow(0 0 5px currentColor)}
+.ring text{fill:var(--teal);font:15px var(--mono);text-anchor:middle;dominant-baseline:central;filter:drop-shadow(0 0 5px var(--cy))}
+/* ---- reactor (the orb) */
+.orbbox{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0 0}
+.orb{--glow:var(--cy);--k:1;width:210px;height:210px;border:0;padding:0;background:none;position:relative;display:block;border-radius:50%;animation:breathe 4s ease-in-out infinite;-webkit-tap-highlight-color:transparent}
+.orb svg{width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
+.orb .r{fill:none;stroke:var(--glow);transform-box:fill-box;transform-origin:center;filter:drop-shadow(0 0 4px var(--glow))}
+.orb .r1{stroke-width:1;stroke-dasharray:2 7;opacity:.7;animation:spin calc(12s*var(--k)) linear infinite reverse}
+.orb .r2{stroke-width:3;stroke-dasharray:96 30 18 30;animation:spin calc(9s*var(--k)) linear infinite}
+.orb .r3{stroke-width:1.2;opacity:.85;animation:spin calc(20s*var(--k)) linear infinite reverse}
+.orb .r4{stroke-width:7;stroke-dasharray:3 9;stroke:var(--am);filter:drop-shadow(0 0 4px var(--am));opacity:.9;animation:spin calc(6s*var(--k)) linear infinite}
+.orb .r5{stroke-width:1.5;stroke-dasharray:40 14;animation:spin calc(4.5s*var(--k)) linear infinite reverse}
+.orb .seg{fill:none;stroke:var(--glow);stroke-width:9;stroke-dasharray:22 9.4;opacity:.38;transform-box:fill-box;transform-origin:center;animation:spin calc(30s*var(--k)) linear infinite}
+.orb .core{fill:var(--glow);filter:drop-shadow(0 0 14px var(--glow)) drop-shadow(0 0 30px var(--glow));transform-box:fill-box;transform-origin:center;animation:core calc(4s*var(--k)) ease-in-out infinite}
+.orb .corein{fill:#fff;opacity:.9}
+.orb .dots{transform-box:view-box;transform-origin:105px 105px;animation:spin calc(7s*var(--k)) linear infinite}
+.orb .dots.b{animation-duration:calc(11s*var(--k));animation-direction:reverse}
+.orb .dots circle{fill:var(--teal);filter:drop-shadow(0 0 5px var(--teal))}
+.orb .dots.b circle{fill:var(--am);filter:drop-shadow(0 0 5px var(--am))}
+.orb:hover .core{filter:drop-shadow(0 0 20px var(--glow)) drop-shadow(0 0 46px var(--glow))}
+.orb:active{transform:scale(.97)}
+.orb[data-s=LISTENING]{--glow:var(--teal);--k:.45;animation:pulse .9s ease-in-out infinite}
+.orb[data-s=THINKING]{--glow:var(--vio);--k:.22}
+.orb[data-s=CODING]{--glow:var(--am);--k:.18}
+.orb[data-s=TESTING]{--glow:var(--am);--k:.12}.orb[data-s=TESTING] .r2{stroke-dasharray:6 8}
+.orb[data-s=SUCCESS]{--glow:var(--green);animation:flash .7s ease-out}
+.orb[data-s=ERROR]{--glow:var(--red);animation:shake .4s linear 2}
+.orb[data-s=OFFLINE]{--glow:#3d5258;animation:none}.orb[data-s=OFFLINE] *{animation-play-state:paused}.orb[data-s=OFFLINE] .r4,.orb[data-s=OFFLINE] .dots circle{stroke:#3d5258;fill:#3d5258;filter:none}
+.orb canvas{position:absolute;inset:-12%;width:124%;height:124%;display:none;pointer-events:none}
+.orb.gl{animation:none}
+.orb.gl canvas{display:block}
+.orb.gl svg{display:none}
+.state{letter-spacing:.42em;font-size:12px;color:var(--teal);text-shadow:0 0 10px var(--cy);margin-top:2px;padding-left:.42em}
+.readout{display:flex;justify-content:space-between;align-items:flex-end;width:100%;margin-top:8px;border-top:1px solid rgba(0,229,255,.14);padding-top:8px}
+.readout .big{font-size:30px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{50%{transform:scale(1.03)}}
+@keyframes core{0%,100%{opacity:.72;transform:scale(.94)}50%{opacity:1;transform:scale(1.07)}}
+@keyframes pulse{50%{transform:scale(1.07)}}
+@keyframes flash{0%{transform:scale(1);opacity:.5}35%{transform:scale(1.1);opacity:1}100%{transform:scale(1)}}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+/* ---- hub = radar */
+#hub{width:100%;height:auto;display:block;overflow:visible}
+#hub .radar{fill:none;stroke:rgba(0,229,255,.16);stroke-width:1}
+#hub .radar.d{stroke-dasharray:2 6;stroke:rgba(0,229,255,.3)}
+#hub .cross{stroke:rgba(0,229,255,.14);stroke-width:1;fill:none}
+#hub .sweep{fill:url(#sweepg);transform-box:view-box;transform-origin:160px 150px;animation:spin 5s linear infinite}
+#hub line{stroke:rgba(0,229,255,.2);stroke-width:1;stroke-dasharray:3 6}
+#hub line.ok{stroke:var(--cy);stroke-dasharray:6 6;animation:flow 1.1s linear infinite;filter:drop-shadow(0 0 3px var(--cy))}
+@keyframes flow{to{stroke-dashoffset:-12}}
+#hub g.node{cursor:pointer}
+#hub g.node circle{fill:rgba(0,14,18,.92);stroke:rgba(0,229,255,.22);stroke-width:1;stroke-dasharray:2 4;transition:fill .15s,stroke .15s}
+#hub g.node .br{fill:none;stroke:var(--dim);stroke-width:1.6;transition:stroke .15s}
+#hub g.node.ok .br{stroke:var(--teal);filter:drop-shadow(0 0 3px var(--cy))}
+#hub g.node:not(.ok) .br{stroke:var(--am);opacity:.75}
+#hub g.node:hover circle{fill:rgba(0,229,255,.16);stroke:var(--cy)}
+#hub g.node:hover .br{stroke:#fff}
+#hub text{fill:var(--text);font:9.5px var(--mono);text-anchor:middle;pointer-events:none;text-transform:uppercase;letter-spacing:.04em}
+#hub text.s{fill:var(--dim);font-size:7.5px;letter-spacing:.12em}
+#hub g.node.ok text.s{fill:var(--teal)}
+#hub .core{fill:rgba(0,229,255,.14);stroke:var(--cy);stroke-width:1.5;filter:drop-shadow(0 0 8px var(--cy))}
+#hub text.c{fill:var(--teal);font-size:9px;letter-spacing:.14em}
+canvas#wave{width:100%;height:64px;display:block}
+/* ---- lists as data tables */
+.list{display:flex;flex-direction:column;max-height:250px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+.item{border:0;border-bottom:1px solid rgba(0,229,255,.13);border-left:2px solid transparent;background:none;padding:6px 8px;cursor:pointer;text-align:left;width:100%;transition:background .12s,border-color .12s}
+.item:hover{background:rgba(0,229,255,.1);border-left-color:var(--cy)}
+.item:active{background:rgba(0,229,255,.2)}
+.item b{display:block;font-weight:400;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item:hover b{color:#fff;text-shadow:0 0 8px var(--cy)}
+.item span{display:block;color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item.unread b::before{content:"";display:inline-block;width:6px;height:6px;background:var(--am);margin-right:7px;box-shadow:0 0 8px var(--am);vertical-align:1px}
+.act{font-size:11px;line-height:1.55;color:var(--dim);max-height:180px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+.act div{white-space:pre-wrap;word-break:break-word;border-bottom:1px dotted rgba(0,229,255,.1);padding:1px 0}
+.act .CODING,.act .TESTING{color:var(--am)}.act .SUCCESS{color:var(--green)}.act .ERROR{color:var(--red)}.act .THINKING{color:var(--vio)}.act .IDLE{color:var(--text)}
+/* ---- chat as a terminal log */
+.chat{display:flex;flex-direction:column;min-height:330px}
+#msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:5px;padding:2px 2px 8px;max-height:48vh;min-height:200px;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+.msg{align-self:stretch;padding:5px 10px 6px;white-space:pre-wrap;word-break:break-word;border-left:2px solid var(--cy);background:rgba(0,229,255,.045);box-shadow:inset 12px 0 16px -14px var(--cy);color:var(--text);font-size:13px}
+.msg small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;margin-bottom:1px}
+.msg.jarvis small{color:var(--cy)}
+.msg.user{border-left-color:var(--am);background:rgba(255,157,69,.05);box-shadow:inset 12px 0 16px -14px var(--am);color:#ffd9b3}
+.msg.user small{color:var(--am)}
+.msg.system{border-left:1px dashed rgba(0,229,255,.35);background:none;box-shadow:none;color:var(--dim);font-size:11px;padding:1px 10px}
+.msg.system::before{content:"// "}
+.typing{display:none;align-self:flex-start;margin:2px 0 6px;padding:5px 12px;background:rgba(0,229,255,.16);border-left:2px solid var(--cy);color:var(--teal);letter-spacing:.3em;font-size:12px;text-shadow:0 0 8px var(--cy)}
+.typing.on{display:block;animation:blink .9s steps(1) infinite}
+.typing i{display:inline-block;width:5px;height:5px;background:var(--teal);margin-left:5px;animation:blink .6s steps(1) infinite}
+.typing i:nth-child(3){animation-delay:.2s}.typing i:nth-child(4){animation-delay:.4s}
+.inbar{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.inbar::before{content:">";color:var(--cy);text-shadow:0 0 8px var(--cy);font-size:16px}
+#text{flex:1;min-width:0;background:rgba(0,10,13,.85);border:1px solid var(--line);color:var(--teal);padding:11px 12px;font:inherit;outline:none;caret-color:var(--cy);transition:border-color .2s,box-shadow .2s}
+#text::placeholder{color:#2f5d66}
+#text:focus{border-color:var(--cy);box-shadow:0 0 14px -4px var(--cy),inset 0 0 12px -8px var(--cy)}
+.btn{width:44px;height:44px;flex:none;border:1px solid var(--line);background:rgba(0,229,255,.05);display:grid;place-items:center;transition:background .15s,border-color .15s,box-shadow .15s}
+.btn:hover{border-color:var(--cy);background:rgba(0,229,255,.16);box-shadow:0 0 16px -4px var(--cy)}
+.btn:active{transform:scale(.93);background:rgba(0,229,255,.3)}
+.btn.rec{background:rgba(255,77,94,.2);border-color:var(--red);box-shadow:0 0 18px -2px var(--red);animation:blink .8s steps(1) infinite}
+.btn.send{border-color:var(--cy);background:rgba(0,229,255,.16)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn svg{width:20px;height:20px;fill:none;stroke:var(--teal);stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;filter:drop-shadow(0 0 4px var(--cy))}
+.btn.rec svg{stroke:var(--red);filter:drop-shadow(0 0 4px var(--red))}
+/* ---- overlays */
+.veil{position:fixed;inset:0;background:rgba(1,5,7,.93);display:none;place-items:center;z-index:20;padding:16px}
+.veil.on{display:grid}
+.box{--b:var(--cy);border:1px solid var(--line);padding:22px 20px 18px;width:min(540px,100%);max-height:86vh;overflow:auto;
+  background:linear-gradient(var(--b),var(--b)) 0 0/22px 2px no-repeat,linear-gradient(var(--b),var(--b)) 0 0/2px 22px no-repeat,
+    linear-gradient(var(--b),var(--b)) 100% 0/22px 2px no-repeat,linear-gradient(var(--b),var(--b)) 100% 0/2px 22px no-repeat,
+    linear-gradient(var(--b),var(--b)) 0 100%/22px 2px no-repeat,linear-gradient(var(--b),var(--b)) 0 100%/2px 22px no-repeat,
+    linear-gradient(var(--b),var(--b)) 100% 100%/22px 2px no-repeat,linear-gradient(var(--b),var(--b)) 100% 100%/2px 22px no-repeat,rgba(0,16,20,.97);
+  box-shadow:0 0 60px -18px var(--cy),inset 0 0 40px -22px var(--cy);animation:boxin .18s ease-out}
+@keyframes boxin{from{opacity:0;transform:scale(.97)}}
+.box h3{margin:0 0 14px;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);text-shadow:0 0 10px var(--cy);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.box table{width:100%;border-collapse:collapse}
+.box td{padding:6px 4px;border-bottom:1px solid rgba(0,229,255,.13);vertical-align:top;word-break:break-word}
+.box td:first-child{color:var(--dim);width:38%;text-transform:uppercase;letter-spacing:.1em;font-size:10.5px}
+.box td:last-child{color:var(--teal)}
+.box pre{white-space:pre-wrap;word-break:break-word;font:13px/1.5 var(--mono);margin:0;color:var(--text)}
+.locked{font-size:22px;letter-spacing:.34em;color:var(--am);text-shadow:0 0 14px var(--am);margin:0 0 4px;animation:blink 1.6s steps(1) infinite}
+.pwline{display:flex;align-items:center;gap:8px;margin:14px 0 6px;border:1px solid var(--line);background:rgba(0,10,13,.9);padding:0 10px}
+.pwline:focus-within{border-color:var(--cy);box-shadow:0 0 14px -4px var(--cy)}
+.pwline span{color:var(--cy);text-shadow:0 0 8px var(--cy)}
+#pw{flex:1;min-width:0;background:none;border:0;color:var(--teal);padding:11px 0;font:inherit;outline:none;letter-spacing:.3em;caret-color:var(--cy)}
+.primary{width:100%;border:1px solid var(--cy);padding:11px;background:rgba(0,229,255,.14);color:var(--teal);letter-spacing:.34em;text-transform:uppercase;text-shadow:0 0 8px var(--cy);transition:background .15s,box-shadow .15s}
+.primary:hover{background:rgba(0,229,255,.28);box-shadow:0 0 18px -4px var(--cy)}.primary:active{transform:translateY(1px)}
+.err{color:var(--red);min-height:18px;font-size:11.5px;letter-spacing:.08em;text-shadow:0 0 8px rgba(255,77,94,.7)}
+#login.granted .box{--b:var(--green);border-color:var(--green);box-shadow:0 0 70px -10px var(--green);animation:granted .75s ease-out forwards}
+#login.granted .locked{color:var(--green);text-shadow:0 0 16px var(--green);animation:none}
+#login.granted .hide{visibility:hidden}
+@keyframes granted{0%{transform:scale(1);opacity:1}25%{transform:scale(1.03)}70%{opacity:1}100%{opacity:0;transform:scale(1.08)}}
+#toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:40;max-width:min(380px,92vw)}
+.toast{background:rgba(30,4,8,.96);border:1px solid var(--red);border-left-width:3px;color:#ffc9cf;padding:8px 12px;font-size:12px;box-shadow:0 0 22px -8px var(--red);animation:in .2s}
+.toast.ok{background:rgba(0,26,16,.96);border-color:var(--green);color:#c9ffe4;box-shadow:0 0 22px -8px var(--green)}
+@keyframes in{from{transform:translateX(14px);opacity:0}}
+@media (max-width:1100px){.grid{grid-template-columns:300px 1fr}.col.right{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}}
+@media (max-width:760px){.app{padding:8px 10px 12px}.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.col.right{display:flex}.orb{width:170px;height:170px}h1{font-size:13px;letter-spacing:.28em}#msgs{max-height:52vh}.big{font-size:30px}.ring svg{width:66px;height:66px}body{background-size:32px 32px,32px 32px,100% 100%}.locked{font-size:17px;letter-spacing:.22em}}
+@media (max-width:420px){.cards{grid-template-columns:1fr}.pill{letter-spacing:.06em}}
+@media (prefers-reduced-motion:reduce){body::after,.orb,.orb *,#hub .sweep,.pill.on i{animation:none!important}}
+/* ================= polish pass: depth, living background, micro-interactions, ripple ================= */
+@property --bk{syntax:"<length>";inherits:false;initial-value:16px}
+body{background-position:calc(var(--mx,0)*-14px) calc(var(--my,0)*-14px),calc(var(--mx,0)*-14px) calc(var(--my,0)*-14px),0 0}
+#bgfx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.8}
+body::before{content:"";position:fixed;inset:-10%;z-index:0;pointer-events:none;background:radial-gradient(520px 380px at calc(50% + var(--mx,0)*60px) calc(30% + var(--my,0)*40px),rgba(0,229,255,.1),transparent 70%);opacity:calc(.6 + var(--amp,0)*.9);transform:scale(calc(1 + var(--amp,0)*.06))}
+.app,.veil,#toasts{position:relative;z-index:1}.veil,#toasts{position:fixed}
+/* hover: the brackets snap in, the glow rises, one scan line sweeps across */
+.card:hover{--bk:26px}
+.card::after{content:"";position:absolute;left:0;right:0;top:0;height:42%;pointer-events:none;background:linear-gradient(to bottom,transparent,rgba(0,229,255,.09) 70%,rgba(95,251,241,.28) 98%,transparent);transform:translateY(-110%);opacity:0}
+.card.click:hover::after,.card:hover::after{animation:sweep .7s ease-out 1}
+@keyframes sweep{0%{transform:translateY(-110%);opacity:1}100%{transform:translateY(250%);opacity:0}}
+.card.click:active{--bk:34px}
+.btn,.ghost,.primary,.item{position:relative;overflow:hidden}
+.btn::after,.ghost::after,.primary::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(95,251,241,.35) 50%,transparent 65%);transform:translateX(-120%);pointer-events:none}
+.btn:hover::after,.ghost:hover::after,.primary:hover::after{transform:translateX(120%);transition:transform .45s ease-out}
+.item{flex:0 0 auto;transition:background .12s,border-color .12s,transform .12s}.item:hover{transform:translateX(3px)}
+.item b svg,.box h3 svg{width:13px;height:13px;vertical-align:-2px;margin-right:7px;fill:none;stroke:var(--teal);stroke-width:1.6;stroke-linecap:square;filter:drop-shadow(0 0 3px var(--cy))}
+#hub g.node .ic{fill:none;stroke:var(--dim);stroke-width:1.3;stroke-linecap:square;stroke-linejoin:miter;pointer-events:none}
+#hub g.node.ok .ic{stroke:var(--teal);filter:drop-shadow(0 0 2px var(--cy))}
+#hub g.node:hover .ic{stroke:#fff}
+#hub g.node{transition:transform .15s;transform-box:fill-box;transform-origin:center}
+#hub g.node:hover{transform:scale(1.08)}
+/* the whole console answers when JARVIS changes state: one pulse runs over every panel border */
+.app.ripple .card{animation:ripple .9s ease-out 1;animation-delay:calc(var(--i,0)*55ms)}
+.app.ripple header::after{animation:rippleline .9s ease-out 1}
+@keyframes ripple{0%{box-shadow:inset 0 0 26px -14px var(--cy)}30%{border-color:var(--rc,var(--cy));box-shadow:inset 0 0 34px -8px var(--rc,var(--cy)),0 0 26px -4px var(--rc,var(--cy))}100%{box-shadow:inset 0 0 26px -14px var(--cy)}}
+@keyframes rippleline{30%{width:100%;background:var(--rc,var(--cy));box-shadow:0 0 16px var(--rc,var(--cy))}}
+.state{transition:color .3s,text-shadow .3s}
+.tick{animation:glitch .42s steps(3) 1}
+@keyframes glitch{0%{opacity:.25;transform:translateX(-2px)}33%{opacity:1;transform:translateX(2px)}66%{opacity:.6;transform:translateX(-1px)}100%{opacity:1;transform:none}}
+@media (max-width:760px){.card{backdrop-filter:none;-webkit-backdrop-filter:none}#bgfx{opacity:.5}.item:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){#bgfx{display:none}.app.ripple .card,.card:hover::after,.tick{animation:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bgfx" aria-hidden="true"></canvas>
+<div class="app" id="app">
+  <header>
+    <h1>J.A.R.V.I.S</h1>
+    <span class="pill" id="net"><i></i><b id="nettxt">Connecting</b></span>
+    <span class="pill" id="voicepill" title="The always-on voice assistant on the laptop"><i></i><b>Voice</b></span>
+    <span class="spacer"></span>
+    <button class="ghost" id="clear" title="Empty the chat history">Clear chat</button>
+    <button class="ghost" id="logout">Log out</button>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card">
+        <h2><em>Reactor core</em><span id="orbhint">click the core to talk</span></h2>
+        <div class="orbbox">
+          <button class="orb" id="orb" data-s="IDLE" title="Click to talk / stop" aria-label="Start or stop listening">
+            <svg viewBox="0 0 210 210" aria-hidden="true">
+              <circle class="r r1" cx="105" cy="105" r="101"/>
+              <circle class="r r2" cx="105" cy="105" r="91"/>
+              <circle class="seg" cx="105" cy="105" r="78"/>
+              <circle class="r r3" cx="105" cy="105" r="68"/>
+              <circle class="r r4" cx="105" cy="105" r="57"/>
+              <circle class="r r5" cx="105" cy="105" r="45"/>
+              <circle class="r r3" cx="105" cy="105" r="36"/>
+              <circle class="core" cx="105" cy="105" r="24"/>
+              <circle class="corein" cx="105" cy="105" r="9"/>
+              <g class="dots"><circle cx="105" cy="4" r="3"/><circle cx="192" cy="155" r="2.2"/><circle cx="18" cy="155" r="2.2"/></g>
+              <g class="dots b"><circle cx="105" cy="27" r="2.4"/><circle cx="105" cy="183" r="2.4"/></g>
+            </svg>
+            <canvas id="orb3d" aria-hidden="true"></canvas>
+          </button>
+          <div class="state" id="state">IDLE</div>
+          <div class="readout"><div><div class="dim small up">Core temp</div><div class="big ro" id="coretemp">--</div></div><div class="dim small up" style="text-align:right">laptop sensor<br><span id="corepow">--</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><em>Connections</em><span id="conncount"></span></h2>
+        <svg id="hub" viewBox="0 0 320 300">
+          <defs><linearGradient id="sweepg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00e5ff" stop-opacity=".3"/><stop offset="1" stop-color="#00e5ff" stop-opacity="0"/></linearGradient></defs>
+          <circle class="radar" cx="160" cy="150" r="140"/><circle class="radar d" cx="160" cy="150" r="112"/><circle class="radar" cx="160" cy="150" r="74"/><circle class="radar d" cx="160" cy="150" r="40"/>
+          <path class="cross" d="M160 6V294M16 150H304M58 48L262 252M262 48L58 252"/>
+          <path class="sweep" d="M160 150L160 10A140 140 0 0 1 259 51Z"/>
+        </svg>
+      </div>
+      <div class="card">
+        <h2><em>Voice activity</em><span id="wavehint">mic off</span></h2>
+        <canvas id="wave" width="600" height="128"></canvas>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="cards">
+        <div class="card click" data-card="weather"><h2><em>Weather</em><span id="wcity"></span></h2><div class="big ro" id="wnow">--</div><div class="up" id="wdesc" style="color:var(--am)">loading</div><div class="small dim up" id="wday"></div></div>
+        <div class="card click" data-card="devices"><h2><em>Devices</em><span>live link</span></h2>
+          <div class="row"><span>Phone</span><b id="dphone">--</b></div><div class="row"><span>Phone battery</span><b class="ro" id="dpbat">--</b></div>
+          <div class="row"><span>Laptop</span><b id="dlap">--</b></div><div class="row"><span>Laptop battery</span><b class="ro" id="dlbat">--</b></div></div>
+        <div class="card click" data-card="system" style="grid-column:1/-1"><h2><em>System</em><span id="stemp"></span></h2>
+          <div class="rings">
+            <div class="ring"><svg viewBox="0 0 80 80"><circle class="tick" cx="40" cy="40" r="38"/><circle cx="40" cy="40" r="32"/><circle class="v" id="rcpu" cx="40" cy="40" r="32" stroke="#00e5ff" style="color:#00e5ff"/><text x="40" y="40" id="tcpu">--</text></svg>CPU</div>
+            <div class="ring"><svg viewBox="0 0 80 80"><circle class="tick" cx="40" cy="40" r="38"/><circle cx="40" cy="40" r="32"/><circle class="v" id="rram" cx="40" cy="40" r="32" stroke="#ff9d45" style="color:#ff9d45"/><text x="40" y="40" id="tram">--</text></svg>RAM</div>
+            <div class="ring"><svg viewBox="0 0 80 80"><circle class="tick" cx="40" cy="40" r="38"/><circle cx="40" cy="40" r="32"/><circle class="v" id="rbat" cx="40" cy="40" r="32" stroke="#5ffbf1" style="color:#5ffbf1"/><text x="40" y="40" id="tbat">--</text></svg>Battery</div>
+          </div></div>
+      </div>
+      <div class="card chat">
+        <h2><em>Command log</em><span>same commands as speaking to JARVIS</span></h2>
+        <div id="msgs"></div>
+        <div class="typing" id="typing">ANALYSING DATA<i></i><i></i><i></i></div>
+        <div class="inbar">
+          <button class="btn" id="mic" title="Record a spoken command" aria-label="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+          <input id="text" placeholder="TYPE A COMMAND, E.G. WHAT TIME IS IT" autocomplete="off" maxlength="1000">
+          <button class="btn send" id="send" title="Send (Enter)" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M4 12h14M12 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col right">
+      <div class="card"><h2><em>Notifications</em><span id="ncount"></span></h2><div class="list" id="notes"><div class="dim small up">loading</div></div></div>
+      <div class="card"><h2><em>Capabilities</em><span id="ccount">built by JARVIS</span></h2><div class="list" id="caps"><div class="dim small up">loading</div></div></div>
+      <div class="card"><h2><em>Live activity</em><span>self-extension</span></h2><div class="act" id="act"><div>nothing is being built right now</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="login"><form class="box" id="loginform"><div class="locked" id="locktitle">SYSTEM LOCKED</div>
+  <div class="dim small up hide">This console controls your laptop and phone. Authorisation required.</div>
+  <div class="pwline hide"><span>&gt;</span><input id="pw" type="password" placeholder="PASSWORD" autocomplete="current-password"></div><div class="err" id="loginerr"></div><button class="primary hide" type="submit">Unlock</button></form></div>
+<div class="veil" id="modal"><div class="box"><h3><span id="mtitle"></span><button class="ghost" id="mclose" type="button">Close</button></h3><div id="mbody"></div></div></div>
+<div id="toasts"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let lastId = 0, lastAct = 0, busy = false, online = false, authed = false, recording = false, serverOrb = "IDLE", notes = [], caps = [], connectors = [];
+
+function toast(text, ok) {
+  const t = document.createElement("div"); t.className = "toast" + (ok ? " ok" : ""); t.textContent = text;
+  $("toasts").appendChild(t); setTimeout(() => t.remove(), 5000);
+}
+async function api(path, opts) {
+  let r;
+  try { r = await fetch(path, Object.assign({credentials: "same-origin"}, opts || {})); }
+  catch (e) { setOnline(false); throw new Error("JARVIS dashboard is not reachable"); }
+  setOnline(true);
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (r.status === 401) { showLogin(); throw new Error("login"); }
+  if (!r.ok) throw new Error(j.error || ("error " + r.status));
+  return j;
+}
+const post = (path, body) => api(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
+function setOnline(on) {
+  if (on === online && $("nettxt").textContent !== "Connecting") return;
+  online = on; $("net").className = "pill " + (on ? "on" : "off"); $("nettxt").textContent = on ? "JARVIS Online" : "JARVIS Offline";
+  if (!on) toast("Lost the connection to JARVIS. Retrying…");
+  paintOrb();
+}
+function paintOrb() {
+  const s = !online ? "OFFLINE" : recording ? "LISTENING" : serverOrb;
+  $("orb").dataset.s = s; $("state").textContent = s;
+}
+function showLogin() { authed = false; $("login").classList.remove("granted"); $("locktitle").textContent = "SYSTEM LOCKED"; $("login").classList.add("on"); setTimeout(() => $("pw").focus(), 50); }
+$("loginform").onsubmit = async e => {
+  e.preventDefault(); $("loginerr").textContent = "";
+  try {
+    await post("/api/login", {password: $("pw").value}); $("pw").value = ""; authed = true; start();
+    $("locktitle").textContent = "ACCESS GRANTED"; $("login").classList.add("granted");                       // a short flash, then the console
+    setTimeout(() => { $("login").classList.remove("on"); $("login").classList.remove("granted"); }, 750);
+  }
+  catch (err) { $("loginerr").textContent = err.message === "login" ? "Wrong password." : err.message; }
+};
+$("logout").onclick = async () => { try { await post("/api/logout"); } catch (e) {} location.reload(); };
+$("clear").onclick = async () => { if (!confirm("Empty the chat history?")) return; try { await post("/api/history/clear"); $("msgs").innerHTML = ""; lastId = 0; } catch (e) { toast(e.message); } };
+
+// ---- chat
+function addMsg(m) {
+  if (m.id <= lastId) return; lastId = m.id;
+  const d = document.createElement("div"); d.className = "msg " + m.role;
+  const when = new Date(m.ts * 1000).toLocaleTimeString("en-GB", {hour12: false});
+  d.innerHTML = (m.role === "system" ? "" : "<small>[" + when + "] " + (m.role === "user" ? "YOU" : "JARVIS") + "</small>") + esc(m.text);
+  const box = $("msgs"), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  box.appendChild(d); if (stick) box.scrollTop = box.scrollHeight;
+}
+function setBusy(b) { busy = b; $("typing").classList.toggle("on", b); $("send").disabled = b; }
+async function pollHistory() {
+  if (!authed) return;
+  try { const j = await api("/api/history?after=" + lastId); j.messages.forEach(addMsg); setBusy(j.busy); serverOrb = j.orb; paintOrb(); } catch (e) {}
+}
+async function send() {
+  const text = $("text").value.trim(); if (!text || busy) return;
+  $("text").value = ""; setBusy(true);
+  try { await post("/api/chat", {text}); pollHistory(); } catch (e) { setBusy(false); if (e.message !== "login") { toast(e.message); $("text").value = text; } }
+}
+$("send").onclick = send;
+$("text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+
+// ---- microphone (core click or mic button): record, send, JARVIS turns it into text
+let rec = null, chunks = [], audioCtx = null, analyser = null, stream = null;
+async function toggleMic() {
+  if (recording) { rec && rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { toast("The microphone only works on http://localhost or over HTTPS. Here, type instead."); return; }
+  try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); } catch (e) { toast("Microphone not allowed: " + e.message); return; }
+  chunks = []; rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = async () => {
+    recording = false; $("mic").classList.remove("rec"); $("wavehint").textContent = "mic off"; $("orbhint").textContent = "click the core to talk"; paintOrb();
+    stream.getTracks().forEach(t => t.stop()); analyser = null;
+    const blob = new Blob(chunks, {type: rec.mimeType || "audio/webm"}); if (blob.size < 1500) { toast("That was too short."); return; }
+    const fd = new FormData(); fd.append("audio", blob, "voice.webm"); setBusy(true);
+    try { const j = await api("/api/voice", {method: "POST", body: fd}); toast("Heard: " + j.heard, true); pollHistory(); } catch (e) { setBusy(false); toast(e.message); }
+  };
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; audioCtx.createMediaStreamSource(stream).connect(analyser);
+  rec.start(); recording = true; $("mic").classList.add("rec"); $("wavehint").textContent = "listening - click again to send"; $("orbhint").textContent = "listening… click to send"; paintOrb();
+  setTimeout(() => recording && rec.stop(), 20000);
+}
+$("orb").onclick = toggleMic; $("mic").onclick = toggleMic;
+(function wave() {                                            // equalizer bars: they move only with real microphone sound, flat when the mic is off
+  const c = $("wave"), g = c.getContext("2d"), buf = new Uint8Array(128), N = 56, level = new Float32Array(N);
+  (function draw() {
+    requestAnimationFrame(draw); g.clearRect(0, 0, c.width, c.height);
+    if (analyser) analyser.getByteFrequencyData(buf);
+    let sum = 0; if (analyser) for (let i = 0; i < 64; i++) sum += buf[i];
+    window.jarvisAmp = analyser ? Math.min(1, sum / 64 / 110) : 0;                                         // real microphone loudness, 0 when the mic is off
+    const w = c.width / N, mid = c.height / 2;
+    g.fillStyle = "rgba(0,229,255,.22)"; g.fillRect(0, mid, c.width, 1);
+    for (let i = 0; i < N; i++) {
+      const target = analyser ? Math.max(2, buf[Math.floor(i * 1.6)] / 255 * (c.height - 12)) : 2;
+      level[i] += (target - level[i]) * .35;
+      const h = level[i], hot = h > c.height * .55;
+      g.fillStyle = hot ? "#ff9d45" : "#00e5ff"; g.shadowBlur = analyser ? 10 : 0; g.shadowColor = g.fillStyle;
+      g.fillRect(i * w + 2, mid - h / 2, Math.max(2, w - 5), h);
+    }
+  })();
+})();
+
+// ---- cards
+function ring(id, txt, pct, label) {
+  const c = 2 * Math.PI * 32; $(id).style.strokeDasharray = c; $(id).style.strokeDashoffset = c * (1 - Math.max(0, Math.min(100, pct || 0)) / 100); $(txt).textContent = label;
+}
+const ICON = {computer: "M3 5h18v11H3zM8 20h8M12 16v4", phone: "M8 3h8v18H8zM11 18h2", whatsapp: "M4 20l1.5-4A8 8 0 1 1 9 19.2zM9 9c0 3 3 6 6 6", email: "M3 6h18v12H3zM3 6l9 7 9-7",
+  telegram: "M3 11l18-7-4 16-5-5-3 3v-5zM9 13l8-6", local_ai: "M7 7h10v10H7zM10 10h4v4h-4zM7 3v4M12 3v4M17 3v4M7 17v4M12 17v4M17 17v4M3 9h4M3 15h4M17 9h4M17 15h4", online_ai: "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18M3 12h18M12 3c-4 4-4 14 0 18M12 3c4 4 4 14 0 18",
+  voice: "M10 4h4v9h-4zM6 11a6 6 0 0 0 12 0M12 17v4", message: "M4 5h16v11H9l-5 4z", reminder: "M12 4a8 8 0 1 0 0 16a8 8 0 0 0 0-16M12 8v4l3 2", power: "M12 3v8M7 6a7 7 0 1 0 10 0",
+  capability: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5", laptop: "M5 6h14v9H5zM2 19h20"};
+const icon = k => ICON[k] ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[k]}"/></svg>` : "";
+function drawHub() {
+  const svg = $("hub"); svg.querySelectorAll("line,g.node,circle.core,text.c").forEach(n => n.remove());
+  const cx = 160, cy = 150, R = 112, n = connectors.length; let h = "";
+  connectors.forEach((c, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+    h += `<line class="${c.ok ? "ok" : ""}" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`; });
+  h += `<circle class="core" cx="${cx}" cy="${cy}" r="26"/><text class="c" x="${cx}" y="${cy + 3}">JARVIS</text>`;
+  connectors.forEach((c, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a), l = x - 28, r = x + 28, t = y - 22, b = y + 22, k = 8;
+    const br = `M${l} ${t + k}V${t}H${l + k}M${r - k} ${t}H${r}V${t + k}M${r} ${b - k}V${b}H${r - k}M${l + k} ${b}H${l}V${b - k}`;                 // four corner brackets = a target marker
+    h += `<g class="node ${c.ok ? "ok" : ""}" data-id="${esc(c.id)}"><circle cx="${x}" cy="${y}" r="27"/><path class="br" d="${br}"/>${ICON[c.id] ? `<path class="ic" transform="translate(${x - 7.2} ${y - 19}) scale(.6)" d="${ICON[c.id]}"/>` : ""}<text x="${x}" y="${y + 5}">${esc(c.name)}</text><text class="s" x="${x}" y="${y + 15}">${c.ok ? "online" : "offline"}</text></g>`; });
+  svg.insertAdjacentHTML("beforeend", h);
+  svg.querySelectorAll("g.node").forEach(g => g.onclick = () => detail(g.dataset.id));
+  $("conncount").textContent = connectors.filter(c => c.ok).length + " of " + n + " working";
+}
+async function pollOverview() {
+  if (!authed) return;
+  try {
+    const o = await api("/api/overview"), s = o.system, w = o.weather, p = o.phone;
+    ring("rcpu", "tcpu", s.cpu, Math.round(s.cpu) + "%"); ring("rram", "tram", s.ram, Math.round(s.ram) + "%");
+    ring("rbat", "tbat", s.battery ? s.battery.percent : 0, s.battery ? s.battery.percent + "%" : "n/a");
+    $("stemp").textContent = (s.temp ? Math.round(s.temp) + " °C · " : "") + (s.battery ? (s.battery.plugged ? "charging" : "on battery") : "");
+    $("coretemp").textContent = s.temp ? s.temp.toFixed(2) + "°" : "n/a"; $("corepow").textContent = s.battery ? (s.battery.plugged ? "on charger" : "on battery") : "no battery";
+    if (w.error) { $("wnow").textContent = "--"; $("wdesc").textContent = "weather not available"; $("wcity").textContent = ""; $("wday").textContent = ""; }
+    else { $("wnow").textContent = w.now + "°C"; $("wdesc").textContent = w.desc; $("wcity").textContent = w.city; const d = w.days[0]; $("wday").textContent = "today " + d.lo + "° to " + d.hi + "°" + (d.rain != null ? " · rain " + d.rain + "%" : ""); }
+    $("dphone").textContent = p.connected ? (p.model || "connected") : "not connected"; $("dpbat").textContent = p.connected && p.battery != null ? p.battery + "%" + (p.charging ? " ⚡" : "") : "--";
+    $("dlap").textContent = s.host; $("dlbat").textContent = s.battery ? s.battery.percent + "%" + (s.battery.plugged ? " ⚡" : "") : "no battery";
+    connectors = o.connectors || []; drawHub();
+    const v = connectors.find(c => c.id === "voice"); $("voicepill").className = "pill " + (v && v.ok ? "on" : "off"); $("voicepill").querySelector("b").textContent = v && v.ok ? "Voice assistant on" : "Voice assistant off";
+  } catch (e) { if (e.message !== "login" && online) toast("Could not refresh the cards: " + e.message); }
+}
+async function pollNotes() {
+  if (!authed) return;
+  try {
+    notes = (await api("/api/notifications")).items; $("ncount").textContent = notes.length ? notes.length + " recent" : "";
+    $("notes").innerHTML = notes.length ? notes.map((n, i) => `<button class="item ${n.unread ? "unread" : ""}" data-i="${i}"><b>${icon(n.kind)}${esc(n.title)}</b><span>${esc(String(n.ts).replace("T", " ").slice(0, 16))} · ${esc(n.kind)}</span></button>`).join("") : '<div class="dim small up">nothing recent</div>';
+    $("notes").querySelectorAll(".item").forEach(b => b.onclick = () => { const n = notes[b.dataset.i]; modal(n.title, "<pre>" + esc(n.text) + "</pre><p class='dim small up'>" + esc(n.kind) + " · " + esc(String(n.ts).replace("T", " ")) + "</p>"); });
+  } catch (e) {}
+}
+async function pollCaps() {
+  if (!authed) return;
+  try {
+    caps = (await api("/api/capabilities")).items; const live = caps.filter(c => c.status === "active"); $("ccount").textContent = live.length ? live.length + " active" : "built by JARVIS";
+    $("caps").innerHTML = caps.length ? caps.slice().reverse().map((c, i) => `<button class="item" data-n="${esc(c.name)}"><b>${esc(c.name.replace(/_/g, " "))}</b><span>${esc(c.status)} · ${esc(c.created || "")}</span></button>`).join("") : '<div class="dim small up">none yet - try: add a feature that tells a joke</div>';
+    $("caps").querySelectorAll(".item").forEach(b => b.onclick = () => { const c = caps.find(x => x.name === b.dataset.n);
+      modal(c.name.replace(/_/g, " "), table([["What it does", c.description], ["Status", c.status], ["Made", c.created], ["Asked as", c.request], ["Say", c.example], ["Also", (c.triggers || []).join(" · ")], ["Attempts needed", c.tries], ["Used", (c.uses || 0) + " times" + (c.last_used ? ", last " + c.last_used : "")], ["Errors", c.errors || 0], ["File", "jarvis_addons/capabilities/" + c.file]])); });
+  } catch (e) {}
+}
+async function pollActivity() {
+  if (!authed) return;
+  try {
+    const items = (await api("/api/activity?after=" + lastAct)).items; if (!items.length) return;
+    const box = $("act"); if (!lastAct) box.innerHTML = "";
+    items.forEach(a => { lastAct = a.ts; const d = document.createElement("div"); d.className = a.state; d.textContent = new Date(a.ts * 1000).toLocaleTimeString() + "  " + a.state + "  " + a.text; box.appendChild(d); });
+    box.scrollTop = box.scrollHeight; pollCaps();
+  } catch (e) {}
+}
+const table = rows => "<table>" + rows.filter(r => r[1] !== undefined && r[1] !== null && r[1] !== "").map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("") + "</table>";
+function modal(title, html) { $("mtitle").textContent = title; $("mbody").innerHTML = html; $("modal").classList.add("on"); }
+async function detail(card) { modal("Loading…", "<div class='dim up'>asking JARVIS</div>"); try { const d = await api("/api/detail/" + card); modal(d.title, table(d.rows)); } catch (e) { $("modal").classList.remove("on"); if (e.message !== "login") toast(e.message); } }
+$("mclose").onclick = () => $("modal").classList.remove("on");
+$("modal").onclick = e => { if (e.target === $("modal")) $("modal").classList.remove("on"); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("modal").classList.remove("on"); });
+document.querySelectorAll(".card.click").forEach(c => c.onclick = () => detail(c.dataset.card));
+
+// ---- readouts count up / down to a new value with a short glitch instead of jumping (looks only: the final text is exactly what was set)
+document.querySelectorAll(".ro, .ring text").forEach(el => {
+  let shown = el.textContent, busyTick = false;
+  const obs = new MutationObserver(() => {
+    if (busyTick) return;
+    const target = el.textContent, a = parseFloat(shown), b = parseFloat(target), m = target.match(/^-?\d+(\.\d+)?/);
+    el.classList.remove("tick"); void el.getBoundingClientRect(); el.classList.add("tick");
+    if (!m || isNaN(a) || isNaN(b) || a === b) { shown = target; return; }
+    const dec = (m[1] || "").length ? m[1].length - 1 : 0, rest = target.slice(m[0].length), t0 = performance.now();
+    busyTick = true;
+    (function step(now) {
+      const k = Math.min(1, (now - t0) / 450), v = a + (b - a) * (1 - Math.pow(1 - k, 3));
+      el.textContent = k < 1 ? v.toFixed(dec) + rest : target;
+      if (k < 1) requestAnimationFrame(step); else { shown = target; obs.takeRecords(); busyTick = false; }
+    })(t0);
+  });
+  obs.observe(el, {childList: true, characterData: true, subtree: true});
+});
+
+// ---- state ripple: when JARVIS's state changes, one pulse in that state's colour runs over all panel borders
+(function ripple() {
+  const app = $("app"), tone = {LISTENING: "--teal", THINKING: "--vio", CODING: "--am", TESTING: "--am", SUCCESS: "--green", ERROR: "--red", OFFLINE: "--dim", IDLE: "--cy"};
+  document.querySelectorAll(".card").forEach((c, i) => c.style.setProperty("--i", i));
+  let was = $("orb").dataset.s, timer = 0;
+  new MutationObserver(() => {
+    const s2 = $("orb").dataset.s; if (s2 === was) return; was = s2;
+    app.style.setProperty("--rc", "var(" + (tone[s2] || "--cy") + ")"); $("state").style.color = "var(" + (tone[s2] || "--teal") + ")";
+    app.classList.remove("ripple"); void app.offsetWidth; app.classList.add("ripple");
+    clearTimeout(timer); timer = setTimeout(() => app.classList.remove("ripple"), 1700);
+    window.__ripples = (window.__ripples || 0) + 1;
+  }).observe($("orb"), {attributes: true, attributeFilter: ["data-s"]});
+})();
+
+// ---- living background: a slow particle field with depth, moved a little by the mouse, breathing with the real microphone loudness
+(function background() {
+  const c = $("bgfx"), g = c.getContext("2d"), root = document.body, P = [];
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let w = 0, h = 0, mx = 0, my = 0, tx = 0, ty = 0, last = 0;
+  function size() { w = c.width = innerWidth; h = c.height = innerHeight; }
+  size(); addEventListener("resize", size);
+  const n = innerWidth < 760 ? 26 : 60;
+  for (let i = 0; i < n; i++) P.push({x: Math.random(), y: Math.random(), z: .25 + Math.random() * .75, v: .004 + Math.random() * .012, a: Math.random() < .14});
+  addEventListener("pointermove", e => { tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5; }, {passive: true});
+  (function draw(ts) {
+    requestAnimationFrame(draw);
+    if (document.hidden || ts - last < 33) return;                                                          // ~30 pictures a second is plenty for a slow drift
+    const dt = Math.min(.1, (ts - last) / 1000); last = ts;
+    mx += (tx - mx) * .06; my += (ty - my) * .06; const amp = window.jarvisAmp || 0;
+    root.style.setProperty("--mx", mx.toFixed(3)); root.style.setProperty("--my", my.toFixed(3)); root.style.setProperty("--amp", amp.toFixed(2));
+    g.clearRect(0, 0, w, h);
+    for (const p of P) {
+      p.y -= p.v * dt * p.z; if (p.y < -.02) { p.y = 1.02; p.x = Math.random(); }
+      const x = (p.x - mx * .06 * p.z) * w, y = (p.y - my * .06 * p.z) * h, r = (.6 + p.z * 1.3) * (1 + amp * 1.5);
+      g.fillStyle = p.a ? "rgba(255,157,69," + (.25 + .4 * p.z) + ")" : "rgba(0,229,255," + (.12 + .38 * p.z) + ")";
+      g.fillRect(x, y, r, r);                                                                               // tiny squares: cheaper than circles, and they suit the HUD
+      if (p.z > .8) { g.fillStyle = "rgba(0,229,255,.07)"; g.fillRect(x - 6, y, 13, 1); }
+    }
+  })(0);
+})();
+
+// ---- the reactor core in real 3D (Three.js / WebGL). It only reads #orb's data-s; when WebGL or the library is missing the SVG reactor stays.
+function initOrb3D() {
+  if (!window.THREE || !window.WebGLRenderingContext) return;
+  const orb = $("orb"), canvas = $("orb3d"), css = getComputedStyle(document.documentElement), col = n => new THREE.Color(css.getPropertyValue(n).trim());
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true, powerPreference: "low-power"}); } catch (e) { return; }
+  const C = {cy: col("--cy"), teal: col("--teal"), am: col("--am"), green: col("--green"), red: col("--red"), vio: col("--vio"), grey: new THREE.Color("#3d5258")};
+  // per state: main colour, accent colour, ring speed, core brightness, core pulses per second, ring pattern
+  const STATES = {IDLE: [C.cy, C.am, .35, 1.1, .25, "calm"], LISTENING: [C.teal, C.cy, 1.5, 2.4, 1.6, "calm"], THINKING: [C.vio, C.cy, 2.6, 1.7, .9, "tumble"],
+    CODING: [C.am, C.cy, 2.2, 1.6, 2.4, "counter"], TESTING: [C.am, C.teal, 3.2, 1.4, 4, "scan"], SUCCESS: [C.green, C.teal, 1.2, 2.6, 1, "calm"],
+    ERROR: [C.red, C.am, .8, 2.6, 5, "calm"], OFFLINE: [C.grey, C.grey, .04, .25, 0, "calm"]};
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(38, 1, .1, 50);
+  camera.position.set(0, 0, 12.2);
+  scene.add(new THREE.AmbientLight(0xffffff, .28));
+  const coreLight = new THREE.PointLight(0xffffff, 2.2, 14); scene.add(coreLight);                 // the light comes out of the core
+  const keyLight = new THREE.PointLight(0xffffff, .9, 30); keyLight.position.set(3.5, 4, 7); scene.add(keyLight);
+  const main = new THREE.MeshStandardMaterial({color: 0x08242a, emissive: C.cy.clone(), emissiveIntensity: 1.1, roughness: .35, metalness: .6, flatShading: true});
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(.82, 1), main); scene.add(core);
+  const cage = new THREE.Mesh(new THREE.IcosahedronGeometry(1.08, 1), new THREE.MeshBasicMaterial({color: C.cy.clone(), wireframe: true, transparent: true, opacity: .32})); scene.add(cage);
+  const g2 = document.createElement("canvas"); g2.width = g2.height = 128; const x2 = g2.getContext("2d"), gr = x2.createRadialGradient(64, 64, 2, 64, 64, 64);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.25, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x2.fillStyle = gr; x2.fillRect(0, 0, 128, 128);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(g2), color: C.cy.clone(), transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending}));
+  halo.scale.set(4.2, 4.2, 1); scene.add(halo);
+  // four real torus rings, each in its own tilted plane and with its own speed: [radius, tube, arc, tilt x, tilt z, speed, accent?]
+  const RINGS = [[1.55, .035, 6.283, 1.25, .2, 1.0, 0], [2.0, .06, 4.6, .55, -.7, -.7, 1], [2.45, .028, 6.283, -.9, .5, .5, 0], [2.9, .05, 5.2, .25, 1.1, -.35, 0]];
+  const rings = RINGS.map(([r, tube, arc, tx, tz, speed, accent]) => {
+    const mat = new THREE.MeshStandardMaterial({color: 0x06181c, emissive: (accent ? C.am : C.cy).clone(), emissiveIntensity: .75, roughness: .4, metalness: .7});
+    const mesh = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 72, arc), mat), pivot = new THREE.Group();
+    pivot.rotation.set(tx, 0, tz); pivot.add(mesh); scene.add(pivot);
+    return {mesh, pivot, mat, speed, accent, tx, tz};
+  });
+  // small spheres on real 3D orbits (each rides in the plane of one ring)
+  const dots = [[0, 1.55, 1.9, 0], [1, 2.0, -1.3, 2], [2, 2.45, 1.1, 4], [3, 2.9, -.8, 1], [2, 2.45, 1.1, 1.2]].map(([ring, r, speed, phase]) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(.075, 10, 10), new THREE.MeshBasicMaterial({color: (ring === 1 ? C.am : C.teal).clone()}));
+    rings[ring].pivot.add(m); return {m, r, speed, phase, ring};
+  });
+  const now = {color: C.cy.clone(), accent: C.am.clone(), speed: .35, glow: 1.1};
+  let last = performance.now(), t = 0, flash = 0, prev = orb.dataset.s, frames = 0;
+  function size() { const w = canvas.clientWidth || 260; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setSize(w, w, false); }
+  if (window.ResizeObserver) new ResizeObserver(size).observe(orb); else window.addEventListener("resize", size);
+  orb.classList.add("gl"); size();
+  window.__orb3d = {frames: 0, state: prev, rings: rings.length, dots: dots.length, version: THREE.REVISION};
+  (function frame(ts) {
+    requestAnimationFrame(frame);
+    if (document.hidden || ts - last < 24) { if (document.hidden) last = ts; return; }                       // at most ~40 pictures a second, none while the tab is hidden
+    const dt = Math.min(.05, (ts - last) / 1000); last = ts; t += dt;
+    const name = orb.dataset.s in STATES ? orb.dataset.s : "IDLE", S = STATES[name], amp = name === "LISTENING" ? (window.jarvisAmp || 0) : 0;
+    if (name !== prev) { prev = name; flash = (name === "SUCCESS" || name === "ERROR") ? 1 : .45; }           // every state change gives a short pulse
+    const k = Math.min(1, dt * 4);
+    now.color.lerp(S[0], k); now.accent.lerp(S[1], k); now.speed += (S[2] - now.speed) * k; now.glow += (S[3] - now.glow) * k; flash = Math.max(0, flash - dt * 1.6);
+    const pulse = S[4] ? Math.sin(t * S[4] * 6.283) * .5 + .5 : 0, pat = S[5];
+    main.emissive.copy(now.color); main.emissiveIntensity = now.glow * (.32 + .3 * pulse) + flash * 1.6 + amp * 1.2;        // kept low enough that the facets and their shading stay visible
+    const cs = 1 + .07 * pulse + flash * .28 + amp * .35; core.scale.setScalar(cs); cage.scale.setScalar(1 + .04 * pulse + flash * .5 + amp * .25);
+    core.rotation.x += dt * .5 * now.speed; core.rotation.y += dt * .8 * now.speed; cage.rotation.y -= dt * .35 * now.speed; cage.rotation.z += dt * .2 * now.speed;
+    cage.material.color.copy(now.color); cage.material.opacity = .22 + .2 * pulse + flash * .4;
+    halo.material.color.copy(now.color); halo.material.opacity = Math.min(.9, .14 + .1 * now.glow + flash * .45 + amp * .35); halo.scale.setScalar(4.4 + .6 * pulse + flash * 2.2 + amp * 1.6);
+    coreLight.color.copy(now.color); coreLight.intensity = 1.2 + now.glow + flash * 3 + amp * 2; keyLight.color.copy(now.color).lerp(new THREE.Color(0xffffff), .6);
+    rings.forEach((r, i) => {
+      const dir = pat === "counter" ? (i % 2 ? -2.2 : 2.2) / Math.abs(r.speed) * Math.abs(r.speed) * Math.sign(r.speed) : 1;
+      r.mesh.rotation.z += dt * r.speed * now.speed * 1.6 * dir;
+      if (pat === "tumble") { r.pivot.rotation.x += dt * .5 * (i % 2 ? -1 : 1) * now.speed * .5; r.pivot.rotation.y += dt * .3 * now.speed * .5; }
+      else { r.pivot.rotation.x += (r.tx - r.pivot.rotation.x) * k * .5; r.pivot.rotation.y += (0 - r.pivot.rotation.y) * k * .5; }
+      const scanS = pat === "scan" ? 1 + .09 * Math.sin(t * 9 - i * 1.3) : 1; r.mesh.scale.setScalar(scanS + flash * .12 * (i + 1) / 4);
+      r.mat.emissive.copy(r.accent ? now.accent : now.color); r.mat.emissiveIntensity = (name === "OFFLINE" ? .2 : .75) + .35 * pulse + flash * 1.4;
+    });
+    dots.forEach(d => { const a = d.phase + t * d.speed * now.speed * 1.4; d.m.position.set(Math.cos(a) * d.r, Math.sin(a) * d.r, Math.sin(a * 2 + d.phase) * .18);
+      d.m.material.color.copy(d.ring === 1 ? now.accent : now.color).lerp(new THREE.Color(0xffffff), .35); });
+    scene.rotation.y = Math.sin(t * .25) * .22; scene.rotation.x = Math.sin(t * .17) * .1;                   // the whole reactor sways slowly: real depth
+    renderer.render(scene, camera);
+    window.__orb3d.frames = ++frames; window.__orb3d.state = name;
+  })(last);
+}
+(function loadThree() {
+  const sc = document.createElement("script");
+  sc.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"; sc.crossOrigin = "anonymous"; sc.referrerPolicy = "no-referrer";
+  sc.onload = () => { try { initOrb3D(); } catch (e) { $("orb").classList.remove("gl"); } };              // any failure: the SVG reactor simply stays
+  document.head.appendChild(sc);
+})();
+
+// ---- life cycle
+let started = false;
+function start() {
+  pollHistory().then(() => { $("msgs").scrollTop = $("msgs").scrollHeight; }); pollOverview(); pollNotes(); pollCaps(); pollActivity();
+  if (started) return; started = true;
+  setInterval(pollHistory, 1300); setInterval(pollActivity, 1500); setInterval(pollOverview, 8000); setInterval(pollNotes, 20000); setInterval(pollCaps, 15000);
+}
+async function ping() { try { const j = await api("/api/ping"); if (j.authed && !authed) { authed = true; $("login").classList.remove("on"); start(); } else if (!j.authed) showLogin(); } catch (e) {} }
+window.addEventListener("error", e => toast("Something in the page failed: " + e.message));
+window.addEventListener("unhandledrejection", e => { e.preventDefault(); });
+ping(); setInterval(ping, 5000);
+</script>
+</body>
+</html>

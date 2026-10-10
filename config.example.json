@@ -1,0 +1,31 @@
+{
+  "_how_to_use": "Copy this file to config.json, fill in what you have, then run:  venv\\Scripts\\python.exe -m jarvis_addons.config_file --apply   (config.json is git-ignored; the values go into the local database jarvis_memory.db, which is git-ignored too). Leave a placeholder as it is to skip that entry. The interactive alternative is:  venv\\Scripts\\python.exe jarvis_setup.py",
+
+  "owner_name": "your-name",
+  "city": "your-city",
+
+  "gemini_api_key": "your-gemini-api-key",
+  "groq_keys": "your-groq-api-key",
+  "ollama_model": "qwen2.5:7b",
+
+  "telegram_token": "your-telegram-bot-token",
+  "telegram_owner_id": "your-numeric-telegram-user-id",
+
+  "email_address": "your-email-address",
+  "email_app_password": "your-email-app-password",
+  "email_notify_number": "your-whatsapp-number-for-alerts",
+
+  "adb_target": "your-phone-ip:5555",
+  "phone_password": "your-phone-pin-if-jarvis-should-unlock-it",
+
+  "dry_run": "1",
+
+  "_notes": {
+    "AI keys": "At least one of gemini_api_key (aistudio.google.com) or groq_keys (console.groq.com, several keys separated by commas) - or a local Ollama model, which needs no key.",
+    "telegram": "Optional. Easier:  python -m jarvis_addons.telegram_bot --setup  (it learns your user id by itself).",
+    "phone": "Optional. Easier:  python -m jarvis_addons.phone_link  (finds the phone on your Wi-Fi, no address to type).",
+    "dry_run": "1 = WhatsApp messages are typed but NOT sent (safe default). 0 = really sent.",
+    "environment variables": "GEMINI_API_KEY and JARVIS_PHONE_PASSWORD are read when the entry above is not set; PEXELS_API_KEY (optional) is used by the website builder for stock photos.",
+    "dashboard password": "Not set here: the first start writes a random one to dashboard_password.txt, or run  python -m jarvis_addons.dashboard --set-password ..."
+  }
+}

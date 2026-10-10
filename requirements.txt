@@ -1,0 +1,32 @@
+# JARVIS - the libraries the code imports directly (Windows, Python 3.11).
+#   pip install -r requirements.txt
+# The one-click installer (Install_JARVIS.bat) uses requirements.lock.txt instead: the exact, complete set this was tested with.
+
+# voice in / out
+SpeechRecognition==3.17.0
+PyAudio==0.2.14
+pygame==2.6.1
+edge-tts==7.2.8
+noisereduce==3.0.3
+vosk==0.3.45
+sherpa-onnx==1.13.8
+onnxruntime==1.30.0
+numpy==2.4.6
+
+# AI brains (Gemini, Groq; Ollama needs no library)
+google-genai==2.24.0
+groq==1.7.0
+
+# laptop control and system readings
+PyAutoGUI==0.9.54
+psutil==7.2.2
+pywin32==312
+pillow==12.3.0
+aiohttp==3.14.3
+
+# dashboard
+Flask==3.0.3
+
+# only for the tests
+pytest==8.2.2
+selenium==4.49.0
