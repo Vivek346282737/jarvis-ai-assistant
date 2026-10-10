@@ -24,6 +24,9 @@ jarvis_off.flag
 jarvis_addons/capabilities/activity.jsonl
 jarvis_addons/capabilities/registry.json
 jarvis_addons/data/last_scan.json
+jarvis_addons/data/notes.json
+jarvis_addons/data/expenses.json
+jarvis_addons/data/habits.json
 agent_tasks/
 startup_backup/
 

@@ -45,6 +45,7 @@ to damage the machine or the assistant itself. Most of the design effort went in
 | **Web dashboard** | Password-protected local page: chat with persistent history, real CPU / RAM / battery / temperature, weather, phone state, a hub of the real connections, notifications, and the self-extension steps streaming live. Its centre piece is a WebGL (Three.js) reactor that reflects the assistant's state. Works at phone width. |
 | **Email** | Important-mail detection with deadline extraction and WhatsApp follow-up reminders that stop once the mail is answered. |
 | **Network discovery** | Lists the devices on the home network with maker and a conservative type guess — "unknown" rather than a confident wrong answer. Discovery only; it never logs into anything. |
+| **Everyday helpers** | Notes ("note kar: milk lena"), expense log ("spent 200 on lunch", "aaj kitna kharch hua"), offline unit converter and calculator ("convert 5 km to miles", "calculate 12*(3+4)", "20 percent of 450"), water and habit streaks ("paani piya", "habit done gym"). All local, all offline. |
 | **Resource governor** | Background work pauses on battery, under load or when the laptop is hot; the local model is unloaded when idle; one-click off / on. |
 
 ## Architecture
@@ -83,6 +84,7 @@ to damage the machine or the assistant itself. Most of the design effort went in
 | `telegram_bot.py`, `callmebot.py` | Telegram remote control and alert calls |
 | `phone_link.py`, `phone_helper/`, `phone_compat.py`, `pattern_lock.py` | the phone connection |
 | `perf.py`, `power.py` | resource governor, one-click off / on |
+| `notes.py`, `expenses.py`, `converter.py`, `habits.py` | everyday helpers (shared hook in `_rules.py`) |
 | `contact_sync.py`, `network_discovery.py`, `voice_ort.py`, `usage_log.py`, `config_file.py` | contacts, network scan, voice-lock fallback, local usage log, settings file |
 
 The Telegram bot and the dashboard run as separate background processes that the assistant starts and keeps alive.

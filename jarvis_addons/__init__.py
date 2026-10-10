@@ -5,7 +5,7 @@ live_cmd_console.py; the add-ons that need to hook into a running JARVIS are ins
 def install(host):
     """Called once with JARVIS's module globals. Every add-on installs itself independently; a broken one never stops JARVIS."""
     done = []
-    for name in ("perf", "power", "phone_compat", "pattern_lock", "usage_log", "voice_ort", "phone_link", "phone_battery", "telegram_bot", "capability", "dashboard", "network_discovery", "contact_sync"):
+    for name in ("perf", "power", "phone_compat", "pattern_lock", "usage_log", "voice_ort", "phone_link", "phone_battery", "telegram_bot", "capability", "dashboard", "network_discovery", "contact_sync", "notes", "expenses", "converter", "habits"):
         try:
             mod = __import__(f"{__name__}.{name}", fromlist=["install"])
             if mod.install(host):
