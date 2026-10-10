@@ -32,6 +32,9 @@ screenshots/
 downloads/
 *.png
 *.jpg
+!docs/*.png
+!docs/*.jpg
+!docs/*.gif
 *.mp3
 *.wav
 time.sleep

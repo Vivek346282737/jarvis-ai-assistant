@@ -5,8 +5,7 @@ dashboard. When it is asked for something it cannot do yet, it **generates the c
 verifies the code, tests it in a sandboxed process, and only then registers and runs it** — with a deny-list, a retry
 budget and automatic rollback.
 
-<!-- Dashboard screenshot / GIF: save it as docs/dashboard.gif and replace this comment with: ![JARVIS dashboard](docs/dashboard.gif) -->
-> **Screenshot / demo GIF of the dashboard goes here.**
+![JARVIS dashboard](docs/dashboard.jpg)
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue) ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-lightgrey) ![Tests](https://img.shields.io/badge/tests-280%20unit%20%C2%B7%20201%20end--to--end%20%C2%B7%2035%20browser-brightgreen) ![License](https://img.shields.io/badge/license-MIT-green)
 
